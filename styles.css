@@ -28,7 +28,7 @@ body {
   cursor: pointer;
   transition: all ease 0.2s;
 }
-.favourite-button:hover {
+.favourite-button:active {
   color: red;
   width: 36px;
   height: 36px;
