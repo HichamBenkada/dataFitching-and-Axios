@@ -111,25 +111,28 @@ const API_KEY =
  */
 axios.defaults.baseURL = "https://api.thecatapi.com/v1/";
 axios.defaults.headers.common["x-api-key"] = API_KEY;
+
+let breeds;
 async function initialLoad() {
-  infoDump.textContent = "Hello World! Nothing to show yet!? Select a Breed!";
+  try {
+    //- Retrieve a list of breeds from the cat API
+    const { data } = await axios.get(`breeds`);
 
-  //- Retrieve a list of breeds from the cat API
-  const { data } = await axios.get(`breeds`);
-
-  const breeds = data;
-  // console.log(breeds); //checked
-
-  breeds.forEach((breed) => {
-    // - Create new <option> for each of these breeds, annd append them to breedSelect.
-    const option = document.createElement("option");
-    // - Each option should have a breed id as value attribute
-    option.setAttribute("value", breed.id);
-    // - Each option should display breed name as text
-    option.textContent = breed.name;
-    breedSelect.appendChild(option);
-  });
-  breedSelectHandler();
+    breeds = data;
+    console.log("line123:", breeds); //checked
+    breeds.forEach((breed) => {
+      // - Create new <option> for each of these breeds, annd append them to breedSelect.
+      const option = document.createElement("option");
+      // - Each option should have a breed id as value attribute
+      option.setAttribute("value", breed.id);
+      // - Each option should display breed name as text
+      option.textContent = breed.name;
+      breedSelect.appendChild(option);
+    });
+    breedSelectHandler();
+  } catch (err) {
+    console.error("Error at Initial load of breeds...", err);
+  }
 }
 // This function should execute immediately.
 initialLoad();
@@ -137,34 +140,35 @@ initialLoad();
 /**
  * Part2:
  */
-breedSelect.addEventListener("change", breedSelectHandler)
-async function breedSelectHandler(e){
-  // console.log(e.target.value);
-  let breedId = e.target.value;
+breedSelect.addEventListener("change", breedSelectHandler);
+async function breedSelectHandler() {
   try {
     // - Retrieve information on the selected breed from the cat API
     const { data, durationInMS } = await axios.get(
-      `images/search?limit=10&breed_ids=${breedId}`,
+      `images/search?limit=10&breed_ids=${breedSelect.value}`,
       { onDownloadProgress: updateProgress }
     );
     console.log(
       `Retrieving information on the selected breed took ${durationInMS} milliseconds.`
     );
     // - Make sure your request is receiving multiple array items! //Checked
-    console.log("Line150:", data);
+    console.log("Line156:", data);
     const breedsInfo = data;
 
     //  * - Each new selection should clear, re-populate, and restart the Carousel.
     Carousel.clear(); //Clear all the Carousel elements
     Carousel.start(); //restart the Carousel
     breedsInfo.forEach((breed) => {
-     //  * - For each object in the response array, create a new element for the carousel.
-        const element = Carousel.createCarouselItem(breed.url, "Cat", breed.id);
-        //  *  - Append each of these new elements to the carousel.
-        Carousel.appendCarousel(element);
+      //  * - For each object in the response array, create a new element for the carousel.
+      const element = Carousel.createCarouselItem(breed.url, "Cat", breed.id);
+      //  *  - Append each of these new elements to the carousel.
+      Carousel.appendCarousel(element);
     });
     // * - Use the other data you have been given to create an informational section within the infoDump element.
-    const breedInfo = breedsInfo[0].breeds[0];
+    const breedInfo = breeds.find(
+      (element) => element.id === breedSelect.value
+    );
+    // console.log("Line171 ", breedInfo);//checked
     infoDump.innerHTML = `<h1><em> About ${breedInfo.name}:<em></h1>
       <p><br/>${breedInfo.description} this breed is originally from${
       breedInfo.origin
@@ -175,13 +179,13 @@ async function breedSelectHandler(e){
     }lbs, and their life span is within ${breedInfo.life_span} years. <br/>
     If you would like to learn more <a href=${
       breedInfo.wikipedia_url
-    } target="_blank">...Click here!</a>
+    } target = "_blank">...Click here!</a>
       </p>`;
-  }catch (err) {
+  } catch (err) {
     console.error(err);
   }
   // Add a call to this function to the end of your initialLoad function above to create the initial carousel.DONE!
-};
+}
 
 /**
  * 5. Add axios interceptors to log the time between request and response to the console.
@@ -196,7 +200,7 @@ axios.interceptors.request.use((request) => {
   document.body.style.cursor = "progress";
   request.metadata = request.metadata || {};
   request.metadata.startTime = new Date().getTime();
-  
+
   return request;
 });
 
@@ -219,9 +223,6 @@ axios.interceptors.response.use(
  * - The progressBar element has already been created for you.
  *  - You need only to modify its "width" style property to align with the request progress.
  * - In your request interceptor, set the width of the progressBar element to 0%.
- */ //DONE!
-
-/**
  *  - This is to reset the progress with each request.
  * - Research the axios onDownloadProgress config option.
  * - Create a function "updateProgress" that receives a ProgressEvent object.
@@ -229,7 +230,6 @@ axios.interceptors.response.use(
 function updateProgress(ProgressEvent) {
   //*  - Pass this function to the axios onDownloadProgress config option in your event handler.DONE!
   //  * - console.log your ProgressEvent object within updateProgess, and familiarize yourself with its structure.
-
   // console.log(ProgressEvent);//checked
   const downloadPercentage = Math.floor(
     (ProgressEvent.loaded * 100) / ProgressEvent.total
@@ -242,68 +242,73 @@ function updateProgress(ProgressEvent) {
  * 7. As a final element of progress indication, add the following to your axios interceptors:
  * - In your request interceptor, set the body element's cursor style to "progress."DONE!
  * - In your response interceptor, remove the progress cursor style from the body element."DONE!"
- */
-/**
+ *----
  * 8. To practice posting data, we'll create a system to "favourite" certain images.
- * - The skeleton of this function has already been created for you.This function is used within Carousel.js to add the event listener as items are created.This is why we use the export keyword for this function.
+ * - The skeleton of this function has already been created for you.This function is used within "Carousel.js" to add the event listener as items are created.This is why we use the export keyword for this function.
  * - Post to the cat API's favourites endpoint with the given ID.
- 
  */
 
-export async function favourite(imgId)
- {
+
+export async function favourite(imgId) {
   try {
-    // * - The API documentation gives examples of this functionality using fetch(); use Axios
-    // console.log(favouriteCats);
-    // let favIndex; //=favouriteCats.findIndex(cat =>cat["image_id"] === imgId);
-    // console.log("Line 240", favIndex);
-    //     if(!imgId){
-    //       const newFavourite = await axios.post(`favourites`,{
-    //         image_id:imgId
-    //     }).then((res) => console.log(res.data))
-    //     }else{
-    // // * - Add additional logic to this function such that if the image is already favourited,you delete that favourite using the API, giving this function "toggle" functionality.You can call this function by clicking on the heart at the top right of any image.
-    // const deleteFav = await axios.delete("favourites/imgId")
-    // .then((res)=>{console.log(res)});
-    //     }
+    const favCats = await axios.get("favourites");
+    const favCat = favCats.data.find(({ image_id }) => image_id === imgId);
+    console.log("favCat exist:",favCat )
+    if (favCat) {
+      await axios.delete(`favourites/${favCat['id']}`);
+      console.log(`the cat is removed from favourites`)
+    } else {
+      await axios.post("favourites", { image_id: imgId })
+        .then((res) => {
+          console.log('the cat is added to favourites')
+        });
+    }
   } catch (err) {
     console.error(err);
   }
 }
-
 /**
  * 9. Test your favourite() function by creating a getFavourites() function.
  * - Use Axios to get all of your favourites from the cat API.
  * - Clear the carousel and display your favourites when the button is clicked.
  *  - You will have to bind this event listener to getFavouritesBtn yourself.
- *  - Hint: you already have all of the logic built for building a carousel.
- *    If that isn't in its own function, maybe it should be so you don't have to
- *    repeat yourself in this section.
+ *  - Hint: you already have all of the logic built for building a carousel. If that isn't in its own function, maybe it should be so you don't have to repeat yourself in this section.
  */
+getFavouritesBtn.addEventListener("click", getFavourites);
 async function getFavourites() {
-  const request = await axios
-    .get("favourites")
-    .then((res) => console.log(res.data));
-  console.log("Line270", favouriteCats);
-  getFavouritesBtn.addEventListener("click", () => {
+  try {
+   await axios.get("favourites")
+   .then((res) =>{
+    console.log(res.data);
     Carousel.clear(); //Clear all the Carousel elements
-    Carousel.start(); //restart the Carousel
-    favouriteCats.forEach((cat) => {
-      //  * - For each object in the response array, create a new element for the carousel.
-      const element = Carousel.createCarouselItem(
-        cat.image.url,
-        "Cat",
-        cat.image.id
-      );
-      //  *  - Append each of these new elements to the carousel.
-      Carousel.appendCarousel(element);
-    });
-  });
+    if(!(res.data.length)){
+      infoDump.textContent = "No Favourite has been specified yet! Select a breed and choose your favourite pictures!"
+    }else{
+      infoDump.textContent = "";
+      res.data.forEach((cat) => {
+        console.log("line281: ", cat);
+        //  * - For each object in the response array, create a new element for the carousel.
+        const element = Carousel.createCarouselItem(
+          cat.image.url,
+          "Cat",
+          cat.image.id
+        );
+        //  *  - Append each of these new elements to the carousel.
+        Carousel.appendCarousel(element);
+      });
+      Carousel.start();
+   }
+  })
+  } catch (error) {
+    console.error(err)
+  }
+ 
 }
+
 /**
  * 10. Test your site, thoroughly!
  * - What happens when you try to load the Malayan breed?
  *  - If this is working, good job! If not, look for the reason why and fix it!
  * - Test other breeds as well. Not every breed has the same data available, so
  *   your code should account for this.
-*/
+ */
